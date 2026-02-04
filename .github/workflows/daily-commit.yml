@@ -1,0 +1,50 @@
+name: Daily Learning Log Update
+
+on:
+  schedule:
+    # Run daily at 9:00 AM UTC (adjust as needed)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  update-log:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Get full history
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "${{ vars.GIT_USERNAME || 'github-actions[bot]' }}"
+          git config --global user.email "${{ vars.GIT_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}"
+      
+      - name: Update daily log with Python script
+        run: |
+          python update_daily_log.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Commit and push if changes exist
+        run: |
+          git add learning_log.md
+          git diff --cached --quiet || {
+            git commit -m "docs: Update daily learning log for $(date +%Y-%m-%d)"
+            git push origin main
+            echo "✅ Changes committed and pushed"
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Verify changes
+        run: |
+          echo "Checking recent commits:"
+          git log --oneline -5
